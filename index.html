@@ -1,1 +1,634 @@
-DASHBOARD_PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕵️ Competitor Intelligence HQ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#070a12;--surface:#111520;--surface2:#191d2e;--surface3:#1f2438;
+    --accent:#6c63ff;--accent2:#ff6584;--green:#00e5a0;--yellow:#f5c542;
+    --red:#ff4d6d;--blue:#38bdf8;--purple:#c084fc;
+    --text:#e2e8f0;--muted:#64748b;--border:#1e2540;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+  /* SIDEBAR */
+  .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;height:100%;overflow-y:auto;z-index:100}
+  .logo{padding:0 20px 28px;display:flex;align-items:center;gap:10px}
+  .logo-icon{font-size:28px;filter:drop-shadow(0 0 12px rgba(108,99,255,0.6))}
+  .logo-text{font-size:15px;font-weight:700;color:white;line-height:1.2}
+  .logo-text span{color:var(--accent)}
+  .nav-section{padding:6px 12px;margin-bottom:2px}
+  .nav-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin-bottom:6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;
+    color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none}
+  .nav-item:hover{background:var(--surface2);color:var(--text)}
+  .nav-item.active{background:rgba(108,99,255,.15);color:#a09cff}
+  .nav-item .icon{font-size:16px;width:18px;text-align:center}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);margin-left:auto;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
+  .last-run-label{font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+  .last-run-time{font-size:12px;color:var(--green);font-weight:600}
+
+  /* MAIN */
+  .main{margin-left:220px;flex:1;min-height:100vh}
+  .topbar{position:sticky;top:0;z-index:50;background:rgba(7,10,18,.92);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+  .topbar-title{font-size:18px;font-weight:700;color:white}
+  .topbar-sub{font-size:12px;color:var(--muted);margin-top:1px}
+  .topbar-actions{display:flex;align-items:center;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:8px;font-size:13px;
+    font-weight:600;cursor:pointer;border:none;transition:all .15s}
+  .btn-primary{background:var(--accent);color:white}
+  .btn-primary:hover{background:#7c74ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(108,99,255,.4)}
+  .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+  .btn-ghost:hover{background:var(--surface3)}
+  .content{padding:28px 32px}
+
+  /* PAGES */
+  .page{display:none}.page.active{display:block}
+
+  /* STAT CARDS */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+  .stat-card.green::before{background:var(--green)}.stat-card.red::before{background:var(--red)}
+  .stat-card.blue::before{background:var(--blue)}.stat-card.purple::before{background:var(--purple)}
+  .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+  .stat-value{font-size:28px;font-weight:700;color:white;line-height:1}
+  .stat-sub{font-size:12px;color:var(--muted);margin-top:6px}
+  .stat-icon{position:absolute;top:16px;right:16px;font-size:22px;opacity:.3}
+
+  /* LAYOUTS */
+  .two-col{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;margin-bottom:20px}
+  .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+
+  /* CARDS */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .card-title{font-size:14px;font-weight:600;color:white;display:flex;align-items:center;gap:8px}
+  .card-body{padding:20px}
+
+  /* COMPETITOR CARDS */
+  .competitor-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
+    position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+  .competitor-card:hover{border-color:rgba(108,99,255,.4);transform:translateY(-2px)}
+  .comp-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+  .comp-name{font-size:16px;font-weight:700;color:white}
+  .comp-domain{font-size:11px;color:var(--muted);margin-top:2px}
+  .threat-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}
+  .threat-high{background:rgba(255,77,109,.15);color:var(--red);border:1px solid rgba(255,77,109,.3)}
+  .threat-medium{background:rgba(245,197,66,.15);color:var(--yellow);border:1px solid rgba(245,197,66,.3)}
+  .threat-low{background:rgba(0,229,160,.15);color:var(--green);border:1px solid rgba(0,229,160,.3)}
+  .comp-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .comp-metric{background:var(--surface2);border-radius:8px;padding:10px 12px}
+  .comp-metric-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .comp-metric-value{font-size:15px;font-weight:700;color:white;margin-top:3px}
+  .comp-metric-value.green{color:var(--green)}.comp-metric-value.red{color:var(--red)}.comp-metric-value.yellow{color:var(--yellow)}
+  .price-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .price-pill{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);color:#a09cff;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600}
+  .comp-signals{display:flex;flex-wrap:wrap;gap:6px}
+  .signal-tag{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:2px 8px;font-size:11px}
+  .signal-tag.hot{background:rgba(255,101,132,.1);border-color:rgba(255,101,132,.2);color:#ff8fa3}
+
+  /* CHART */
+  .chart-container{position:relative;height:260px}
+
+  /* ACTION ITEMS */
+  .action-item{display:flex;gap:14px;padding:14px;border:1px solid var(--border);border-radius:10px;
+    margin-bottom:10px;background:var(--surface2);transition:border-color .2s}
+  .action-item:hover{border-color:rgba(108,99,255,.3)}
+  .action-number{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;flex-shrink:0;margin-top:1px}
+  .action-1{background:rgba(255,77,109,.2);color:var(--red)}
+  .action-2{background:rgba(245,197,66,.2);color:var(--yellow)}
+  .action-3{background:rgba(0,229,160,.2);color:var(--green)}
+  .action-title{font-size:13px;font-weight:600;color:white;margin-bottom:4px}
+  .action-desc{font-size:12px;color:var(--muted);line-height:1.5}
+  .action-meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .action-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--surface3);color:var(--muted)}
+
+  /* ALERTS */
+  .alert{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:10px;margin-bottom:10px;border:1px solid}
+  .alert-danger{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.25)}
+  .alert-warning{background:rgba(245,197,66,.08);border-color:rgba(245,197,66,.25)}
+  .alert-success{background:rgba(0,229,160,.08);border-color:rgba(0,229,160,.25)}
+  .alert-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+  .alert-title{font-size:13px;font-weight:600;color:white;margin-bottom:3px}
+  .alert-body{font-size:12px;color:var(--muted);line-height:1.5}
+
+  /* NEWS */
+  .news-item{padding:14px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:flex-start}
+  .news-item:last-child{border-bottom:none}
+  .news-source{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);
+    background:rgba(108,99,255,.1);padding:2px 8px;border-radius:4px;white-space:nowrap;margin-top:2px}
+  .news-title{font-size:13px;color:var(--text);font-weight:500;line-height:1.4}
+  .news-meta{font-size:11px;color:var(--muted);margin-top:4px}
+  .news-meta a{color:var(--accent);text-decoration:none}
+
+  /* CONFIG */
+  .form-group{margin-bottom:20px}
+  .form-label{font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;display:block;text-transform:uppercase;letter-spacing:.04em}
+  .form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+  .form-input:focus{border-color:var(--accent)}
+  .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .comp-config-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;position:relative}
+  .comp-config-name{font-size:13px;font-weight:600;color:white;margin-bottom:10px}
+  .remove-btn{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px}
+  .remove-btn:hover{color:var(--red)}
+
+  /* REPORT */
+  .report-content{max-width:840px;line-height:1.8}
+  .report-content h2{font-size:17px;color:white;margin:30px 0 12px;padding:10px 16px;background:var(--surface2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0}
+  .report-content h3{font-size:14px;color:#c0c8ff;margin:20px 0 8px;border-bottom:1px solid var(--border);padding-bottom:5px}
+  .report-content p{margin:8px 0;font-size:13px;color:var(--text)}
+  .report-content ul{padding-left:20px;margin:8px 0}
+  .report-content li{font-size:13px;color:var(--text);margin:5px 0}
+  .report-content strong{color:white}
+  .report-content a{color:var(--accent);text-decoration:none}
+  .report-content hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+  .report-content blockquote{background:rgba(108,99,255,.07);border-left:3px solid var(--accent);padding:10px 16px;border-radius:0 8px 8px 0;margin:12px 0;color:var(--muted);font-style:italic;font-size:13px}
+  .report-content code{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px}
+
+  /* TABLE */
+  .data-table{width:100%;border-collapse:collapse;font-size:13px}
+  .data-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border)}
+  .data-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+  .data-table tr:last-child td{border-bottom:none}
+  .data-table tr:hover td{background:var(--surface2)}
+  .win{color:var(--green);font-weight:600}.lose{color:var(--red);font-weight:600}.neutral{color:var(--yellow);font-weight:600}
+
+  /* TABS */
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px}
+  .tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+  .tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+  /* PROGRESS BAR */
+  .progress-bar{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:6px}
+  .progress-fill{height:100%;border-radius:3px;transition:width 1s ease}
+
+  /* SCAN OVERLAY */
+  .run-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+    z-index:200;align-items:center;justify-content:center}
+  .run-overlay.show{display:flex}
+  .run-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:480px;text-align:center}
+  .run-modal h3{font-size:20px;color:white;margin-bottom:10px}
+  .run-modal p{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);
+    border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .progress-steps{text-align:left;margin-top:20px}
+  .progress-step{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:13px;color:var(--muted);border-bottom:1px solid var(--border)}
+  .progress-step:last-child{border-bottom:none}
+  .step-icon{font-size:16px;width:20px}
+  .step-active{color:var(--text)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <span class="logo-icon">🕵️</span>
+    <div class="logo-text">Intel<span>HQ</span><br><small style="font-size:10px;color:var(--muted);font-weight:400">Competitor AI</small></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span> Dashboard<span class="status-dot"></span></div>
+    <div class="nav-item" onclick="showPage('competitors',this)"><span class="icon">🎯</span> Competitors</div>
+    <div class="nav-item" onclick="showPage('pricing',this)"><span class="icon">💰</span> Pricing Intel</div>
+  </div>
+  <div class="nav-section" style="margin-top:8px">
+    <div class="nav-label">Insights</div>
+    <div class="nav-item" onclick="showPage('alerts',this)"><span class="icon">🚨</span> Alerts<span style="margin-left:auto;background:rgba(255,77,109,.2);color:#ff4d6d;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">2</span></div>
+    <div class="nav-item" onclick="showPage('actions',this)"><span class="icon">⚡</span> Actions</div>
+    <div class="nav-item" onclick="showPage('news',this)"><span class="icon">📰</span> News Feed</div>
+  </div>
+  <div class="nav-section" style="margin-top:8px">
+    <div class="nav-label">Reports</div>
+    <div class="nav-item" onclick="showPage('report',this)"><span class="icon">📄</span> Full Report</div>
+    <div class="nav-item" onclick="showPage('config',this)"><span class="icon">⚙️</span> Configure</div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="last-run-label">Last Scan</div>
+    <div class="last-run-time">🟢 2026-05-05 05:46 UTC</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">Next: in 6 hours</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">📊 Intelligence Dashboard</div>
+      <div class="topbar-sub" id="page-sub">Real-time competitive monitoring • 3 competitors tracked</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" onclick="exportReport()">⬇️ Export Report</button>
+      <button class="btn btn-primary" onclick="triggerScan()">🔄 Scan Now</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card green"><div class="stat-label">Competitors Tracked</div><div class="stat-value">3</div><div class="stat-sub">Zapier, Make, n8n</div><div class="stat-icon">🎯</div></div>
+        <div class="stat-card red"><div class="stat-label">Active Threats</div><div class="stat-value">2</div><div class="stat-sub">Price undercutting detected</div><div class="stat-icon">🚨</div></div>
+        <div class="stat-card blue"><div class="stat-label">Price Points Found</div><div class="stat-value">14</div><div class="stat-sub">Across all competitors</div><div class="stat-icon">💰</div></div>
+        <div class="stat-card purple"><div class="stat-label">Your Entry vs Avg</div><div class="stat-value">+45%</div><div class="stat-sub">$29 vs $20 competitor avg</div><div class="stat-icon">📊</div></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">💰 Pricing Comparison</div>
+            <select class="form-input" style="width:auto;padding:5px 10px;font-size:12px" onchange="updateChart(this.value)">
+              <option value="bar">Bar Chart</option><option value="radar">Radar</option>
+            </select>
+          </div>
+          <div class="card-body"><div class="chart-container"><canvas id="priceChart"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚡ Priority Actions</div><span style="font-size:11px;color:var(--muted)">This week</span></div>
+          <div class="card-body" style="padding:14px">
+            <div class="action-item"><div class="action-number action-1">1</div><div><div class="action-title">Update pricing comparison page</div><div class="action-desc">Make undercuts by 70% at entry. Add head-to-head table with your advantages.</div><div class="action-meta"><span class="action-tag">🎯 Marketing</span><span class="action-tag">📅 Day 1–2</span></div></div></div>
+            <div class="action-item"><div class="action-number action-2">2</div><div><div class="action-title">A/B test AI-forward headline</div><div class="action-desc">All 3 competitors pushing AI messaging. Test "Powered by AI" vs current copy.</div><div class="action-meta"><span class="action-tag">🚀 Growth</span><span class="action-tag">📅 Day 2–3</span></div></div></div>
+            <div class="action-item"><div class="action-number action-3">3</div><div><div class="action-title">Review Starter tier value prop</div><div class="action-desc">Consider free trial or lowering entry price by $5–10 to match competitors.</div><div class="action-meta"><span class="action-tag">💰 Pricing</span><span class="action-tag">📅 Day 3–5</span></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="three-col">
+        <div class="competitor-card">
+          <div class="comp-header"><div><div class="comp-name">Zapier</div><div class="comp-domain">zapier.com</div></div><div class="threat-badge threat-medium">⚠️ Medium</div></div>
+          <div class="comp-metrics">
+            <div class="comp-metric"><div class="comp-metric-label">Employees</div><div class="comp-metric-value">860</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Revenue</div><div class="comp-metric-value green">$310M</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Funding</div><div class="comp-metric-value">$2.7M</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Entry Price</div><div class="comp-metric-value yellow">$30/mo</div></div>
+          </div>
+          <div class="price-pills"><span class="price-pill">Free</span><span class="price-pill">$30</span><span class="price-pill">$50</span><span class="price-pill">$104</span></div>
+          <div class="comp-signals"><span class="signal-tag hot">🤖 AI Push</span><span class="signal-tag hot">🆓 Free Tier</span><span class="signal-tag">🏢 Enterprise</span></div>
+        </div>
+        <div class="competitor-card">
+          <div class="comp-header"><div><div class="comp-name">Make</div><div class="comp-domain">make.com</div></div><div class="threat-badge threat-high">🚨 High</div></div>
+          <div class="comp-metrics">
+            <div class="comp-metric"><div class="comp-metric-label">Employees</div><div class="comp-metric-value">400</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Revenue</div><div class="comp-metric-value green">$52.6M</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Funding</div><div class="comp-metric-value">$100M</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Entry Price</div><div class="comp-metric-value red">$9/mo 🔥</div></div>
+          </div>
+          <div class="price-pills"><span class="price-pill">Free</span><span class="price-pill">$9</span><span class="price-pill">$16</span><span class="price-pill">$29</span></div>
+          <div class="comp-signals"><span class="signal-tag hot">🤖 AI Push</span><span class="signal-tag hot">🆓 Free Tier</span><span class="signal-tag hot">🎨 No-Code</span></div>
+        </div>
+        <div class="competitor-card">
+          <div class="comp-header"><div><div class="comp-name">n8n</div><div class="comp-domain">n8n.io</div></div><div class="threat-badge threat-high">🚨 High</div></div>
+          <div class="comp-metrics">
+            <div class="comp-metric"><div class="comp-metric-label">Employees</div><div class="comp-metric-value">880</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Revenue</div><div class="comp-metric-value green">$40M</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Funding</div><div class="comp-metric-value green">$254M 🔝</div></div>
+            <div class="comp-metric"><div class="comp-metric-label">Entry Price</div><div class="comp-metric-value red">€20/mo</div></div>
+          </div>
+          <div class="price-pills"><span class="price-pill">Free</span><span class="price-pill">€20</span><span class="price-pill">€50</span><span class="price-pill">€333</span></div>
+          <div class="comp-signals"><span class="signal-tag hot">🤖 AI Nodes</span><span class="signal-tag hot">⚡ Sec. Vuln 2025</span><span class="signal-tag">🏗️ Self-Host</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🕸️ Market Position Radar</div></div>
+        <div class="card-body"><div style="height:260px"><canvas id="radarChart"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- COMPETITORS -->
+    <div class="page" id="page-competitors">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(this,'zapier-tab')">Zapier</div>
+        <div class="tab" onclick="switchTab(this,'make-tab')">Make</div>
+        <div class="tab" onclick="switchTab(this,'n8n-tab')">n8n</div>
+      </div>
+      <div id="zapier-tab">
+        <div class="two-col">
+          <div class="card"><div class="card-header"><div class="card-title">🏢 Company Intel</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Founded</td><td>2011</td></tr><tr><td style="color:var(--muted)">Employees</td><td>860</td></tr><tr><td style="color:var(--muted)">Revenue</td><td class="win">$310M/yr</td></tr><tr><td style="color:var(--muted)">Total Funding</td><td>$2.7M (bootstrapped)</td></tr><tr><td style="color:var(--muted)">Integrations</td><td class="lose">7,000+</td></tr><tr><td style="color:var(--muted)">Key Strength</td><td>Ease of use, breadth</td></tr></table></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">💰 Pricing Tiers</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Free</td><td>100 tasks/mo</td><td class="win">$0</td></tr><tr><td style="color:var(--muted)">Professional</td><td>750 tasks/mo</td><td class="neutral">$29.99/mo</td></tr><tr><td style="color:var(--muted)">Team</td><td>25 users</td><td class="lose">$103.50/mo</td></tr><tr><td style="color:var(--muted)">Company</td><td>Unlimited</td><td class="lose">$348.75/mo</td></tr></table><div style="margin-top:14px;padding:10px 12px;background:rgba(245,197,66,.08);border:1px solid rgba(245,197,66,.2);border-radius:8px;font-size:12px;color:var(--yellow)">⚠️ Entry price ($29.99) nearly identical to yours ($29). Compete on features/value.</div></div></div>
+        </div>
+      </div>
+      <div id="make-tab" style="display:none">
+        <div class="alert alert-danger"><span class="alert-icon">🚨</span><div><div class="alert-title">HIGH THREAT: Price Undercutting</div><div class="alert-body">Make's entry tier at $9/mo is 69% cheaper than your $29 Starter. Immediate action required — add free trial or create a $15–19 lite tier.</div></div></div>
+        <div class="two-col">
+          <div class="card"><div class="card-header"><div class="card-title">🏢 Company Intel</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Founded</td><td>2012 (as Integromat)</td></tr><tr><td style="color:var(--muted)">Employees</td><td>400</td></tr><tr><td style="color:var(--muted)">Revenue</td><td class="win">$52.6M/yr</td></tr><tr><td style="color:var(--muted)">Total Funding</td><td class="win">$100M</td></tr><tr><td style="color:var(--muted)">Key Strength</td><td>Visual scenario builder</td></tr></table></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">💰 Pricing Tiers</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Free</td><td>1,000 ops/mo</td><td class="win">$0</td></tr><tr><td style="color:var(--muted)">Core</td><td>10,000 ops/mo</td><td class="win">$9/mo</td></tr><tr><td style="color:var(--muted)">Pro</td><td>80,000 ops/mo</td><td class="neutral">$16/mo</td></tr><tr><td style="color:var(--muted)">Teams</td><td>300,000 ops/mo</td><td class="neutral">$29/mo</td></tr></table><div style="margin-top:14px;padding:10px 12px;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;font-size:12px;color:var(--red)">🚨 Recommend adding a $15–19/mo tier or free trial immediately.</div></div></div>
+        </div>
+      </div>
+      <div id="n8n-tab" style="display:none">
+        <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div><div class="alert-title">OPPORTUNITY: n8n Security Vulnerability</div><div class="alert-body">n8n webhooks were abused for malware delivery since Oct 2025 (Cisco Talos + Hacker News, Apr 2026). Publish a security-forward blog post NOW to capture users looking for alternatives.</div></div></div>
+        <div class="two-col">
+          <div class="card"><div class="card-header"><div class="card-title">🏢 Company Intel</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Founded</td><td>2019</td></tr><tr><td style="color:var(--muted)">Employees</td><td class="lose">880 (fast-growing)</td></tr><tr><td style="color:var(--muted)">Revenue</td><td class="win">$40M/yr</td></tr><tr><td style="color:var(--muted)">Total Funding</td><td class="lose">$254M 🔝</td></tr><tr><td style="color:var(--muted)">Key Strength</td><td>Open-source + AI nodes</td></tr></table></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">💰 Pricing Tiers</div></div><div class="card-body"><table class="data-table"><tr><td style="color:var(--muted)">Self-host</td><td>Unlimited</td><td class="win">Free (OSS)</td></tr><tr><td style="color:var(--muted)">Starter Cloud</td><td>2,500 executions</td><td class="neutral">€20/mo</td></tr><tr><td style="color:var(--muted)">Pro Cloud</td><td>10,000 executions</td><td class="neutral">€50/mo</td></tr><tr><td style="color:var(--muted)">Enterprise</td><td>Custom</td><td class="lose">€333+/mo</td></tr></table><div style="margin-top:14px;padding:10px 12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;font-size:12px;color:var(--blue)">💡 $254M funding = aggressive expansion in 2026. Watch closely.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICING INTEL -->
+    <div class="page" id="page-pricing">
+      <div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">📊 Full Pricing Comparison</div></div><div class="card-body"><table class="data-table"><thead><tr><th>Tier</th><th>Your Product</th><th>Zapier</th><th>Make</th><th>n8n</th><th>Your Position</th></tr></thead><tbody><tr><td><strong>Free</strong></td><td class="lose">❌ None</td><td class="win">✅ 100 tasks</td><td class="win">✅ 1,000 ops</td><td class="win">✅ Self-host</td><td class="lose">Disadvantaged</td></tr><tr><td><strong>Entry Paid</strong></td><td class="neutral">$29/mo</td><td class="neutral">$29.99/mo</td><td class="win">$9/mo</td><td class="win">€20/mo</td><td class="lose">Most expensive</td></tr><tr><td><strong>Mid Tier</strong></td><td class="neutral">$79/mo</td><td class="neutral">~$50/mo</td><td class="win">$16/mo</td><td class="neutral">€50/mo</td><td class="neutral">Mixed</td></tr><tr><td><strong>Enterprise</strong></td><td class="win">$199/mo</td><td class="lose">$348+/mo</td><td class="neutral">$29/mo</td><td class="lose">€333+/mo</td><td class="win">Competitive ✅</td></tr></tbody></table></div></div>
+      <div class="two-col">
+        <div class="card"><div class="card-header"><div class="card-title">💡 Strategy Recommendations</div></div><div class="card-body">
+          <div class="alert alert-danger"><span class="alert-icon">🚨</span><div><div class="alert-title">No Free Tier = Lost Leads</div><div class="alert-body">All 3 competitors offer free plans. You're losing top-of-funnel. Add a 14-day free trial or freemium with 100 actions/mo.</div></div></div>
+          <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div><div class="alert-title">$9 vs $29 Entry Gap vs Make</div><div class="alert-body">3.2x price gap. Consider a "Lite" tier at $15–19/mo. Don't cannibalize Starter.</div></div></div>
+          <div class="alert alert-success"><span class="alert-icon">✅</span><div><div class="alert-title">Enterprise Tier is Competitive</div><div class="alert-body">Your $199 beats Zapier ($348+) and n8n (€333+). Double down on enterprise messaging.</div></div></div>
+        </div></div>
+        <div class="card"><div class="card-header"><div class="card-title">📈 Entry Price Trend</div></div><div class="card-body"><div style="height:220px"><canvas id="trendChart"></canvas></div><div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">Historical data builds with each scan</div></div></div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="page" id="page-alerts">
+      <div class="alert alert-danger"><span class="alert-icon">🚨</span><div><div class="alert-title">Make.com Entry Price 69% Cheaper</div><div class="alert-body">Make's Core plan at $9/mo vs your $29 Starter is an active threat. Detected: 2026-05-05 05:46 UTC. Recommendation: Add free trial or create $15–19 lite tier within 2 weeks.</div></div></div>
+      <div class="alert alert-danger"><span class="alert-icon">🚨</span><div><div class="alert-title">n8n Raised $254M — Expansion Imminent</div><div class="alert-body">n8n's $254M funding signals aggressive product expansion. Expect new AI features, more integrations, and possible price cuts in 2026. Build your moat now.</div></div></div>
+      <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div><div class="alert-title">All 3 Competitors Pushing AI Messaging</div><div class="alert-body">Zapier, Make, and n8n all prominently feature AI. If your homepage doesn't lead with AI, you'll lose the perception battle. Update homepage hero within 7 days.</div></div></div>
+      <div class="alert alert-warning"><span class="alert-icon">⚠️</span><div><div class="alert-title">Free Tier Gap</div><div class="alert-body">You're the only paid-only option. Being excluded from "free automation tools" searches costs you top-of-funnel traffic. Add at minimum a 14-day free trial.</div></div></div>
+      <div class="alert alert-success"><span class="alert-icon">✅</span><div><div class="alert-title">OPPORTUNITY: n8n Security Vulnerability</div><div class="alert-body">n8n webhooks abused for malware delivery since Oct 2025 (Cisco Talos + Hacker News, Apr 2026). Publish a "Why our platform is more secure" blog post targeting n8n users seeking alternatives.</div></div></div>
+      <div class="alert alert-success"><span class="alert-icon">✅</span><div><div class="alert-title">OPPORTUNITY: Zapier Task-Based Billing Pain</div><div class="alert-body">Reddit/reviews full of Zapier bill-shock complaints. Create a "Switch from Zapier" landing page with a cost calculator showing predictable pricing.</div></div></div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="page" id="page-actions">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Based on the latest scan. Ranked by impact × urgency.</div>
+      <div class="action-item"><div class="action-number action-1">1</div><div style="flex:1"><div class="action-title">Build a Pricing Comparison Landing Page</div><div class="action-desc">Create /compare showing your pricing vs Zapier, Make, and n8n. Include a cost calculator. Target "zapier alternative" and "n8n alternative" searches — highest conversion opportunity right now.</div><div class="action-meta"><span class="action-tag">👤 Marketing + Dev</span><span class="action-tag">📅 Day 1–3</span><span class="action-tag">📈 Very High Impact</span></div><div class="progress-bar" style="margin-top:10px"><div class="progress-fill" style="width:90%;background:var(--red)"></div></div></div></div>
+      <div class="action-item"><div class="action-number action-2">2</div><div style="flex:1"><div class="action-title">Publish n8n Security Alternative Blog Post</div><div class="action-desc">n8n had a significant webhook malware incident covered by Hacker News and Cisco Talos. Publish within 48 hours while news is fresh. Target: "n8n alternative", "n8n security issue".</div><div class="action-meta"><span class="action-tag">👤 Content</span><span class="action-tag">📅 Within 48 hrs ⚡</span><span class="action-tag">⏰ Time-sensitive</span></div><div class="progress-bar" style="margin-top:10px"><div class="progress-fill" style="width:75%;background:var(--yellow)"></div></div></div></div>
+      <div class="action-item"><div class="action-number action-3">3</div><div style="flex:1"><div class="action-title">Launch a 14-Day Free Trial</div><div class="action-desc">You're the only competitor without a free entry point. A 14-day free trial (no credit card) can increase trial signups 30–50% based on SaaS industry benchmarks.</div><div class="action-meta"><span class="action-tag">👤 Product + Growth</span><span class="action-tag">📅 Day 3–7</span><span class="action-tag">📈 High Impact</span></div><div class="progress-bar" style="margin-top:10px"><div class="progress-fill" style="width:85%;background:var(--green)"></div></div></div></div>
+      <div class="action-item"><div class="action-number" style="background:rgba(108,99,255,.2);color:var(--accent)">4</div><div style="flex:1"><div class="action-title">Refresh Homepage with AI Headline</div><div class="action-desc">A/B test "Automate anything with AI" vs current copy. All 3 competitors lead with AI messaging. Use Optimizely or VWO — even 0.5% CVR improvement compounds significantly.</div><div class="action-meta"><span class="action-tag">👤 Growth + Design</span><span class="action-tag">📅 Day 2–4</span><span class="action-tag">🧪 A/B Test</span></div><div class="progress-bar" style="margin-top:10px"><div class="progress-fill" style="width:60%;background:var(--blue)"></div></div></div></div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="page" id="page-news">
+      <div class="card"><div class="card-header"><div class="card-title">📰 Competitor News Feed</div><span style="font-size:11px;color:var(--muted)">Fetched 2026-05-05 05:46 UTC</span></div>
+        <div>
+          <div class="news-item"><div><span class="news-source">🚨 SECURITY</span></div><div><div class="news-title">n8n Webhooks Abused Since October 2025 to Deliver Malware via Phishing Emails</div><div class="news-meta">The Hacker News • Apr 2026 • <a href="https://thehackernews.com/2026/04/n8n-webhooks-abused-since-october-2025.html" target="_blank">Read →</a></div></div></div>
+          <div class="news-item"><div><span class="news-source">🔬 RESEARCH</span></div><div><div class="news-title">The n8n n8mare: How threat actors are misusing AI workflow automation</div><div class="news-meta">Cisco Talos Intelligence • 2026 • <a href="https://blog.talosintelligence.com/the-n8n-n8mare/" target="_blank">Read →</a></div></div></div>
+          <div class="news-item"><div><span class="news-source">💰 PRICING</span></div><div><div class="news-title">Zapier Pricing Breakdown: Is It Still Worth It In 2026?</div><div class="news-meta">ActivePieces Blog • Professional plan from $29.99/mo; Team jumps to $103.50/mo • <a href="https://www.activepieces.com/blog/zapier-pricing" target="_blank">Read →</a></div></div></div>
+          <div class="news-item"><div><span class="news-source">🤖 AI</span></div><div><div class="news-title">Zapier AI Agents: Can They Really Work for You?</div><div class="news-meta">Industry Review • 2026 • Zapier expanding AI agent capabilities aggressively</div></div></div>
+          <div class="news-item"><div><span class="news-source">📊 MARKET</span></div><div><div class="news-title">Top 10 AI Automation Software Solutions Every Team Should Know About in 2026</div><div class="news-meta">Industry Overview • All 3 competitors featured prominently</div></div></div>
+          <div class="news-item"><div><span class="news-source">💰 PRICING</span></div><div><div class="news-title">Stop Paying for n8n Cloud! The Easiest Self-Hosting Guide (2025)</div><div class="news-meta">YouTube • 500K+ views • n8n cloud perceived as expensive; self-host community growing fast</div></div></div>
+          <div class="news-item"><div><span class="news-source">🆓 PROMO</span></div><div><div class="news-title">N8N Hosting Black Friday &amp; Cyber Monday 2025 — Up to 67% OFF</div><div class="news-meta">CyberNews • Nov 2025 • Watch for similar deep discount promotions in 2026</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL REPORT -->
+    <div class="page" id="page-report">
+      <div class="report-content" id="report-md-content"></div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="page" id="page-config">
+      <div style="max-width:720px">
+        <div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">⚙️ Your Product Settings</div></div><div class="card-body">
+          <div class="form-row" style="margin-bottom:16px">
+            <div class="form-group"><label class="form-label">Product Name</label><input class="form-input" value="Your Product"></div>
+            <div class="form-group"><label class="form-label">Target Market</label><input class="form-input" value="SMB SaaS Teams"></div>
+            <div class="form-group"><label class="form-label">Positioning</label><input class="form-input" value="AI-powered automation"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Starter Price ($)</label><input class="form-input" type="number" value="29"></div>
+            <div class="form-group"><label class="form-label">Pro Price ($)</label><input class="form-input" type="number" value="79"></div>
+            <div class="form-group"><label class="form-label">Enterprise ($)</label><input class="form-input" type="number" value="199"></div>
+          </div>
+        </div></div>
+        <div class="card" style="margin-bottom:20px"><div class="card-header"><div class="card-title">🎯 Competitors to Monitor</div><button class="btn btn-ghost" onclick="addCompetitor()" style="padding:5px 12px;font-size:12px">+ Add</button></div>
+          <div class="card-body" id="competitors-config">
+            <div class="comp-config-card"><div class="comp-config-name">Zapier</div><div class="form-row"><div><label class="form-label" style="font-size:10px">Domain</label><input class="form-input" value="zapier.com" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Pricing URL</label><input class="form-input" value="https://zapier.com/pricing" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Keywords</label><input class="form-input" value="AI, pricing, free plan" style="font-size:12px;padding:7px 10px"></div></div><button class="remove-btn" onclick="this.parentElement.remove()">✕</button></div>
+            <div class="comp-config-card"><div class="comp-config-name">Make (Integromat)</div><div class="form-row"><div><label class="form-label" style="font-size:10px">Domain</label><input class="form-input" value="make.com" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Pricing URL</label><input class="form-input" value="https://www.make.com/en/pricing" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Keywords</label><input class="form-input" value="scenarios, AI, free tier" style="font-size:12px;padding:7px 10px"></div></div><button class="remove-btn" onclick="this.parentElement.remove()">✕</button></div>
+            <div class="comp-config-card"><div class="comp-config-name">n8n</div><div class="form-row"><div><label class="form-label" style="font-size:10px">Domain</label><input class="form-input" value="n8n.io" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Pricing URL</label><input class="form-input" value="https://n8n.io/pricing" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Keywords</label><input class="form-input" value="AI nodes, self-host, pricing" style="font-size:12px;padding:7px 10px"></div></div><button class="remove-btn" onclick="this.parentElement.remove()">✕</button></div>
+          </div>
+        </div>
+        <div class="card"><div class="card-header"><div class="card-title">⏱️ Monitoring Schedule</div></div><div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Scan Frequency</label><select class="form-input"><option>Every 6 hours ✅</option><option>Every 12 hours</option><option>Daily</option><option>Weekly</option></select></div>
+            <div class="form-group"><label class="form-label">Alert Threshold</label><select class="form-input"><option>Any change</option><option>5% change ✅</option><option>10% change</option></select></div>
+            <div class="form-group"><label class="form-label">Report Format</label><select class="form-input"><option>HTML Dashboard ✅</option><option>Markdown</option></select></div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:8px" onclick="saveConfig()">💾 Save Configuration</button>
+        </div></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- SCAN OVERLAY -->
+<div class="run-overlay" id="run-overlay">
+  <div class="run-modal">
+    <div class="spinner"></div>
+    <h3>🕵️ Running Intelligence Scan</h3>
+    <p>Scraping competitor websites, pricing pages, and news...</p>
+    <div class="progress-steps" id="scan-steps">
+      <div class="progress-step"><span class="step-icon">⏳</span> Scraping Zapier pricing &amp; homepage</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> Scraping Make.com pricing &amp; homepage</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> Scraping n8n pricing &amp; homepage</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> Fetching news &amp; social signals</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> Apollo org enrichment</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> AI analysis &amp; recommendations</div>
+      <div class="progress-step"><span class="step-icon">⏳</span> Generating report</div>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:20px;width:100%" onclick="document.getElementById('run-overlay').classList.remove('show')">Close (runs in background)</button>
+  </div>
+</div>
+
+<script>
+// ── Embed report data safely ──
+const rawReport = "# \ud83d\udd75\ufe0f Real-Time Competitor Intelligence Report\n**Generated:** 2026-05-05 05:11 UTC\n**Competitors Monitored:** Zapier, Make (Integromat), n8n\n**Your Product:** Your Product\n\n---\n\n## 1. \ud83c\udf10 COMPETITIVE LANDSCAPE SUMMARY\n\n**Zapier**\n- \ud83d\udcbc Size: 860 employees | Revenue: 310M | Funding: 2.7M\n- \ud83d\udcb0 Prices detected: $30 / $50 / $104\n- \ud83d\udce3 Messaging keywords: AI, free, enterprise, simple\n- \ud83d\udcf0 Latest: \u2022 [Plans & Pricing - Zapier](https://zapier.com/pricing)\n\n**Make (Integromat)**\n- \ud83d\udcbc Size: 400 employees | Revenue: 52.6M | Funding: 100M\n- \ud83d\udcb0 Prices detected: $9\n- \ud83d\udce3 Messaging keywords: AI, free, no-code, powerful\n- \ud83d\udcf0 Latest: \u2022 [Pricing & Subscription Packages - Make](https://www.make.com/en/pricing)\n\n**n8n**\n- \ud83d\udcbc Size: 880 employees | Revenue: 40M | Funding: 254M\n- \ud83d\udcb0 Prices detected: $20 / $24 / $50 / $60 / $333\n- \ud83d\udce3 Messaging keywords: AI, collaboration\n- \ud83d\udcf0 Latest: \u2022 [n8n Plans and Pricing - n8n.io](https://n8n.io/pricing/)\n\n\n---\n\n## 2. \ud83d\udcb0 PRICING ANALYSIS & RECOMMENDATIONS\n\n**Your Current Pricing:** Starter $29/mo | Pro $79/mo | Enterprise $199/mo\n\n\ud83d\udfe1 **Zapier** entry price ($30) is roughly on par with ours ($29). Compete on features/value, not price.\n\u26a0\ufe0f **Make (Integromat)** entry price ($9) is 69% LOWER than ours ($29). Consider a limited free tier or lowering Starter by $5\u201310 to stay competitive.\n\u26a0\ufe0f **n8n** entry price ($20) is 31% LOWER than ours ($29). Consider a limited free tier or lowering Starter by $5\u201310 to stay competitive.\n\n**Pricing Opportunity Summary:**\n\n- Competitor average entry price: **$20/mo**\n- Your entry price: **$29/mo**\n- \ud83d\udcca You are **competitively priced** at the entry level. Focus on feature differentiation.\n\n---\n\n## 3. \ud83d\udce3 MARKETING PIVOT RECOMMENDATIONS\n\n\ud83d\udce2 **Zapier** is pushing a free tier. Counter by emphasizing what our paid tiers unlock \u2014 show immediate ROI within 5 minutes of signup.\n\ud83e\udd16 **Zapier** is leaning heavily into AI messaging. Ensure our homepage has a clear 'Powered by AI' headline with concrete examples (e.g. 'Save 3 hours/week').\n\ud83c\udfe2 **Zapier** is targeting enterprise. If we're SMB-focused, double down on speed & simplicity \u2014 'Get started in 5 minutes, no IT required.'\n\ud83d\udce2 **Make (Integromat)** is pushing a free tier. Counter by emphasizing what our paid tiers unlock \u2014 show immediate ROI within 5 minutes of signup.\n\ud83e\udd16 **Make (Integromat)** is leaning heavily into AI messaging. Ensure our homepage has a clear 'Powered by AI' headline with concrete examples (e.g. 'Save 3 hours/week').\n\ud83e\udd16 **n8n** is leaning heavily into AI messaging. Ensure our homepage has a clear 'Powered by AI' headline with concrete examples (e.g. 'Save 3 hours/week').\n\n**Key Message Gaps to Exploit:**\n- If competitors are complex \u2192 Push \"Setup in 5 minutes\" messaging\n- If competitors are expensive \u2192 Lead with \"Half the price, same power\"\n- If competitors lack AI \u2192 Lead with concrete AI productivity numbers\n\n---\n\n## 4. \ud83d\udea8 THREAT ALERTS\n\n\ud83d\udea8 **Make (Integromat)** is significantly cheaper ($9 vs our $29). Risk of price-sensitive customers switching.\n\ud83d\udea8 **n8n** is significantly cheaper ($20 vs our $29). Risk of price-sensitive customers switching.\n\n---\n\n## 5. \u2705 ACTION PLAN (Next 7 Days)\n\n1. **[Day 1\u20132] Update pricing comparison page** \u2014 Add a head-to-head table vs top 3 competitors with your advantages highlighted. Assign: Marketing Lead.\n2. **[Day 2\u20133] A/B test homepage headline** \u2014 Test an AI-forward headline vs current copy. Use competitor messaging gaps as inspiration. Assign: Growth Team.\n3. **[Day 3\u20135] Review Starter tier value** \u2014 Based on competitor pricing data, decide whether to add a feature, lower price, or extend trial length. Assign: Product + Pricing.\n\n---\n\n> \ud83d\udca1 **Pro Tip:** The biggest opportunity is always the competitor's *unhappy customers*. Search \"Zapier alternative\" on Reddit and answer those threads.\n\n\n\n---\n\n## \ud83d\udce6 Raw Competitor Data\n\n### Zapier\n- **Domain:** zapier.com\n- **Scraped:** 2026-05-05 05:11 UTC\n- **Prices Found:** 29.99, 103.50, 49.99, Free\n- **Employees:** 860\n- **Revenue:** 310M\n- **Funding:** 2.7M\n- **Founded:** 2011\n- **Description:** Zapier is a no-code automation platform founded in 2011 that allows users to connect and automate workflows across thousands of applications without needing to code. Co-founded by Wade Foster, Bryan Helmig, and Mike Knoop, Zapier started as a side project to simplify app integrations. Since its publ\n\n**Recent News/Social:**\n\u2022 [Plans & Pricing - Zapier](https://zapier.com/pricing)\n  Whether you need simple integrations or complex workflows, Zapier offers secure and reliable automation as you scale. View our pricing plans today.\n\u2022 [Zapier Pricing Breakdown: Is It Still Worth It In 2026? - Activepieces](https://www.activepieces.com/blog/zapier-pricing)\n  The Team plan is at $103.50 per month, and you're only allowed 2K tasks per month. Typically, large organizations that need to collectively ...\n\u2022 [zapier pricing is out of control. $49/month for 750 tasks? need ...](https://www.reddit.com/r/nocode/comments/1rsjrmm/zapier_pricing_is_out_of_control_49month_for_750/)\n  It handles multi-step workflows and AI steps without the per-task pricing getting as aggressive as Zapier. ... I haven't written code since 2025.\n\u2022 [Zapier Statistics 2026: Unveil Growth Momentum](https://sqmagazine.co.uk/zapier-statistics/)\n  \n\u2022 [Zapier Announces 2025 Zappy Award Winners, Celebrating Leaders Who Transform Work with AI](https://finance.yahoo.com/news/zapier-announces-2025-zappy-award-130000901.html)\n  \n\u2022 [Zapier Appoints First-Ever AI Transformation Officer to Lead New Era of Human-Centered Business Modernization](https://www.globenewswire.com/news-release/2025/10/30/3177736/0/en/Zapier-Appoints-First-Ever-AI-Transformation-Officer-to-Lead-New-Era-of-Human-Centered-Business-Modernization.html)\n  \n\n### Make (Integromat)\n- **Domain:** make.com\n- **Scraped:** 2026-05-05 05:11 UTC\n- **Prices Found:** 9, free\n- **Employees:** 400\n- **Revenue:** 52.6M\n- **Funding:** 100M\n- **Founded:** None\n- **Description:** Make is a visual integration and automation development platform based in Prague, Czech Republic. Founded in 2012 and originally known as Integromat, the company rebranded to Make in 2022. It empowers over 350,000 organizations to streamline processes and connect applications without requiring codin\n\n**Recent News/Social:**\n\u2022 [Pricing & Subscription Packages - Make](https://www.make.com/en/pricing)\n  Choose the perfect plan for your needs. Whether you're new to automation or using it to run your entire business, there's a plan for you.\n\u2022 [Reflections & predictions: 2025 & 2026 in AI and automation - Make](https://www.make.com/en/blog/2025-reflections-2026-predictions)\n  Darin Patterson, VP of Market Strategy, shares why 2025 was key for Make \u2013 and how 2026 will be the biggest yet for automation, AI, ...\n\u2022 [Make (formerly Integromat) Pricing & Hidden Costs in 2025](https://integrately.com/blog/make-pricing)\n  Make's costs vary based on usage (operations) and features needed. It starts with a free plan (1000 ops/month) and ranges up to Team plan that ...\n\u2022 [AI Workflow Automation Tools for Small Businesses: How to Save Hours Every Week in 2025](https://vocal.media/futurism/ai-workflow-automation-tools-for-small-businesses-how-to-save-hours-every-week-in-2025)\n  \n\u2022 [Top 10 Marketing Automation Tools for Solo AI Startup Founders in 2025](https://www.nucamp.co/blog/solo-ai-tech-entrepreneur-2025-top-10-marketing-automation-tools-for-solo-ai-startup-founders-in-2025)\n  \n\u2022 [Paperform launches an AI-native workflow builder to automate small business](https://www.startupdaily.net/advice/business-strategy/paperform-launches-an-ai-native-workflow-builder-to-automate-small-business/)\n  \n\n### n8n\n- **Domain:** n8n.io\n- **Scraped:** 2026-05-05 05:11 UTC\n- **Prices Found:** \u20ac0, \u20ac800, \u20ac24, \u20ac60, \u20ac20, \u20ac50, \u20ac667, \u20ac333\n- **Employees:** 880\n- **Revenue:** 40M\n- **Funding:** 254M\n- **Founded:** 2019\n- **Description:** n8n is a workflow automation platform designed for technical teams, developers, and operations professionals. It combines no-code visual tools with code-level flexibility, allowing users to automate complex business processes. The platform features over 800 pre-built integrations and supports self-h\n\n**Recent News/Social:**\n\u2022 [n8n Plans and Pricing - n8n.io](https://n8n.io/pricing/)\n  All plans include unlimited users & workflows and every integration. Pricing based on monthly workflow executions, regardless of complexity. Monthly.\n\u2022 [The Complete n8n Pricing Guide: Cloud vs Self-Hosted Cost ...](https://www.reddit.com/r/n8n/comments/1r08dkh/the_complete_n8n_pricing_guide_cloud_vs/)\n  Found 3 easy ways to self-host n8n (including one that costs just $5/month). 0.\n\u2022 [Stop Paying for n8n Cloud! The Easiest Self-Hosting Guide (2025)](https://www.youtube.com/watch?v=F2lK9saTS_U)\n  And n8n Cloud? It gets expensive fast. Today, I'm showing you how to get the best of both worlds. We are setting up a private, self-hosted n8n ...\n\u2022 [The n8n n8mare: How threat actors are misusing AI workflow automation](https://blog.talosintelligence.com/the-n8n-n8mare/)\n  \n\u2022 [n8n Webhooks Abused Since October 2025 to Deliver Malware via Phishing Emails](https://thehackernews.com/2026/04/n8n-webhooks-abused-since-october-2025.html)\n  \n\u2022 [N8N Hosting Black Friday & Cyber Monday 2025 - Up to 67% OFF Deal](https://cybernews.com/best-web-hosting/n8n-hosting-black-friday/)\n  \n\n\n\n---\n*This report was auto-generated by the Competitor Intelligence Agent.*\n*Configure competitors in: `/home/user/competitor_intel/config.json`*\n";
+
+// ── Navigation ──
+const pageMeta = {
+  dashboard:   ['📊 Intelligence Dashboard','Real-time competitive monitoring • 3 competitors tracked'],
+  competitors: ['🎯 Competitor Profiles','Deep-dive analysis for each tracked competitor'],
+  pricing:     ['💰 Pricing Intelligence','Side-by-side pricing comparison & strategy'],
+  alerts:      ['🚨 Active Alerts','2 high-priority items require attention'],
+  actions:     ['⚡ Action Plan','AI-generated strategic actions ranked by impact'],
+  news:        ['📰 News Feed','Latest competitor news from across the web'],
+  report:      ['📄 Full Intelligence Report','Complete auto-generated report from latest scan'],
+  config:      ['⚙️ Configuration','Manage competitors, pricing, and scan settings']
+};
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  const [title, sub] = pageMeta[id] || [id, ''];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  if (id === 'report') renderReport();
+}
+
+function switchTab(el, tabId) {
+  el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  el.closest('.page').querySelectorAll('[id$="-tab"]').forEach(t => t.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+// ── Charts ──
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+let priceChartInst;
+
+function buildPriceChart(type) {
+  const ctx = document.getElementById('priceChart');
+  if (priceChartInst) priceChartInst.destroy();
+  priceChartInst = new Chart(ctx, {
+    type: type === 'radar' ? 'radar' : 'bar',
+    data: {
+      labels: type === 'radar'
+        ? ['Entry Price','Mid Tier','Enterprise','Free Tier','AI Features','Ease of Use']
+        : ['Free','Entry Paid','Mid Tier','Enterprise'],
+      datasets: type === 'radar' ? [
+        {label:'Your Product',data:[5,6,9,0,8,9],borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.15)',pointBackgroundColor:'#6c63ff'},
+        {label:'Zapier',      data:[3,5,5,6,7,9],borderColor:'#f5c542',backgroundColor:'rgba(245,197,66,.1)', pointBackgroundColor:'#f5c542'},
+        {label:'Make',        data:[8,9,8,9,7,7],borderColor:'#ff6584',backgroundColor:'rgba(255,101,132,.1)',pointBackgroundColor:'#ff6584'},
+        {label:'n8n',         data:[7,7,5,8,9,6],borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,.1)', pointBackgroundColor:'#00e5a0'}
+      ] : [
+        {label:'Your Product',data:[0,29,79,199],   backgroundColor:'rgba(108,99,255,.85)',borderRadius:6,borderSkipped:false},
+        {label:'Zapier',      data:[0,29.99,50,348], backgroundColor:'rgba(245,197,66,.75)', borderRadius:6,borderSkipped:false},
+        {label:'Make',        data:[0,9,16,29],       backgroundColor:'rgba(255,101,132,.75)',borderRadius:6,borderSkipped:false},
+        {label:'n8n',         data:[0,20,50,333],     backgroundColor:'rgba(0,229,160,.75)', borderRadius:6,borderSkipped:false}
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:14,font:{size:11}}}},
+      scales: type === 'radar'
+        ? {r:{grid:{color:'#1e2540'},ticks:{display:false},pointLabels:{font:{size:11}}}}
+        : {x:{grid:{color:'#1e2540'},ticks:{font:{size:11}}},
+           y:{grid:{color:'#1e2540'},ticks:{font:{size:11},callback:v=>'$'+v}}}
+    }
+  });
+}
+function updateChart(v){buildPriceChart(v)}
+
+new Chart(document.getElementById('radarChart'),{
+  type:'radar',
+  data:{
+    labels:['Entry Price','Mid Tier','Enterprise','Free Tier','AI Features','Ease of Use','Integrations'],
+    datasets:[
+      {label:'Your Product',data:[5,6,9,0,8,9,7],borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.12)',pointBackgroundColor:'#6c63ff',pointRadius:4},
+      {label:'Zapier',      data:[5,6,5,6,7,9,10],borderColor:'#f5c542',backgroundColor:'rgba(245,197,66,.08)',pointBackgroundColor:'#f5c542',pointRadius:4},
+      {label:'Make',        data:[9,8,8,9,7,7,7], borderColor:'#ff6584',backgroundColor:'rgba(255,101,132,.08)',pointBackgroundColor:'#ff6584',pointRadius:4},
+      {label:'n8n',         data:[8,7,5,8,9,6,8], borderColor:'#00e5a0',backgroundColor:'rgba(0,229,160,.08)',pointBackgroundColor:'#00e5a0',pointRadius:4}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{boxWidth:12,padding:12,font:{size:11}}}},
+    scales:{r:{grid:{color:'#1e2540'},ticks:{display:false},pointLabels:{font:{size:11}}}}}
+});
+
+new Chart(document.getElementById('trendChart'),{
+  type:'line',
+  data:{
+    labels:['Mar 1','Mar 15','Apr 1','Apr 15','May 5'],
+    datasets:[
+      {label:'Your Product',data:[29,29,29,29,29],borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.1)',tension:.4,pointRadius:4,fill:true},
+      {label:'Zapier',      data:[30,30,30,30,30],borderColor:'#f5c542',backgroundColor:'transparent',tension:.4,pointRadius:3},
+      {label:'Make',        data:[9,9,9,9,9],      borderColor:'#ff6584',backgroundColor:'transparent',tension:.4,pointRadius:3},
+      {label:'n8n',         data:[20,20,20,20,20], borderColor:'#00e5a0',backgroundColor:'transparent',tension:.4,pointRadius:3}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12,font:{size:11}}}},
+    scales:{x:{grid:{color:'#1e2540'},ticks:{font:{size:10}}},y:{grid:{color:'#1e2540'},ticks:{font:{size:10},callback:v=>'$'+v}}}}
+});
+
+buildPriceChart('bar');
+
+// ── Report renderer ──
+function renderReport() {
+  const el = document.getElementById('report-md-content');
+  let html = rawReport
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:22px;color:white;margin:0 0 20px">$1</h1>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+    .split('\n').map(line => {
+      if (line.match(/^<(h[1-3]|ul|blockquote|hr|li)/)) return line;
+      if (line.trim() === '') return '<br>';
+      return '<p>' + line + '</p>';
+    }).join('\n');
+  el.innerHTML = html;
+}
+
+// ── Scan overlay ──
+function triggerScan() {
+  document.getElementById('run-overlay').classList.add('show');
+  const steps = document.querySelectorAll('#scan-steps .progress-step');
+  let i = 0;
+  steps.forEach(s => s.querySelector('.step-icon').textContent = '⏳');
+  steps[0].querySelector('.step-icon').textContent = '⌛';
+  steps[0].style.color = 'var(--text)';
+  const iv = setInterval(() => {
+    if (i < steps.length) {
+      steps[i].querySelector('.step-icon').textContent = '✅';
+      steps[i].style.color = 'var(--green)';
+      i++;
+      if (i < steps.length) { steps[i].querySelector('.step-icon').textContent = '⌛'; steps[i].style.color = 'var(--text)'; }
+    } else {
+      clearInterval(iv);
+      setTimeout(() => {
+        document.getElementById('run-overlay').classList.remove('show');
+      }, 800);
+    }
+  }, 1100);
+}
+
+function exportReport() {
+  const blob = new Blob([rawReport], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'competitor_intel_' + new Date().toISOString().slice(0,10) + '.md';
+  a.click();
+}
+
+function addCompetitor() {
+  const c = document.getElementById('competitors-config');
+  const d = document.createElement('div');
+  d.className = 'comp-config-card';
+  d.innerHTML = '<input class="form-input" placeholder="Competitor name" style="margin-bottom:10px;font-weight:600"><div class="form-row"><div><label class="form-label" style="font-size:10px">Domain</label><input class="form-input" placeholder="competitor.com" style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Pricing URL</label><input class="form-input" placeholder="https://..." style="font-size:12px;padding:7px 10px"></div><div><label class="form-label" style="font-size:10px">Keywords</label><input class="form-input" placeholder="pricing, AI, free" style="font-size:12px;padding:7px 10px"></div></div><button class="remove-btn" onclick="this.parentElement.remove()">✕</button>';
+  c.appendChild(d);
+}
+
+function saveConfig() {
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '✅ Saved!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+}
+
+// ── Animate progress bars on load ──
+setTimeout(() => {
+  document.querySelectorAll('.progress-fill').forEach(bar => {
+    const w = bar.style.width; bar.style.width = '0';
+    setTimeout(() => bar.style.width = w, 50);
+  });
+}, 400);
+</script>
+</body>
+</html>
